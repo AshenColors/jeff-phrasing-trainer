@@ -1,9 +1,9 @@
 import random, importlib
-jp  = importlib.import_module("jeff-phrasing")
+jp  = importlib.import_module("jeff-phrasing.jeff-phrasing")
 
-simple_starters_keys = jp.SIMPLE_STARTERS.keys()
-simple_pronouns_keys = jp.SIMPLE_PRONOUNS.keys()
-simple_structures_keys = jp.SIMPLE_STRUCTURES.keys()
+simple_starters_keys = list(jp.SIMPLE_STARTERS.keys())
+simple_pronouns_keys = list(jp.SIMPLE_PRONOUNS.keys())
+simple_structures_keys = list(jp.SIMPLE_STRUCTURES.keys())
 
 # Ender format: base_ender: (past_form, suffix_form, past_suffix_form)
 enders = { 
@@ -69,3 +69,28 @@ enders = {
     "RBS": ("RBSZ", "RBTS", "RBTSDZ"),
     "RBG": ("RGBD", "RBGT", "RBGTD")
 }
+
+# Options
+base_ending_max_keys = 2
+include_past = True
+include_suffix = True
+
+def generate_simple_phrase():
+    allowed_enders = [k for k, v in enders.items() if len(k) < base_ending_max_keys]
+    outline = ""
+    outline += random.choice(simple_starters_keys)
+    outline += random.choice(simple_pronouns_keys)
+    outline += random.choice(simple_structures_keys)
+    base_ender = random.choice(allowed_enders)
+    possible_ender_variants = [base_ender]
+    if include_past and (enders[base_ender][0] is not None):
+        possible_ender_variants.append(enders[base_ender][0])
+    if include_suffix and (enders[base_ender][1] is not None):
+        possible_ender_variants.append(enders[base_ender][1])
+    if include_past and include_suffix and (enders[base_ender][2] is not None):
+        possible_ender_variants.append(enders[base_ender][2])
+    outline += random.choice(possible_ender_variants)
+    return outline
+
+
+print(generate_simple_phrase())
