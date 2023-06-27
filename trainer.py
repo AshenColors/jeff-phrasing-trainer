@@ -92,6 +92,8 @@ def generate_simple_phrase():
         possible_ender_variants.append(enders[base_ender][2])
     outline += random.choice(possible_ender_variants)
     translation = jp.lookup([outline]).strip()
+    # Sanity check; make sure we're actually using the shortest stroke for this translation
+    # Can occur if we have past tense on an ender that outputs identical text[]
     reverse_lookup = jp.reverse_lookup(translation)
     return translation + "\t" + (min(reverse_lookup, key=len)[0]) + "\n"
 
