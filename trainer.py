@@ -78,7 +78,7 @@ include_past = False
 include_suffix = False
 
 def generate_simple_phrase():
-    allowed_enders = [k for k, v in enders.items() if len(k) < base_ending_max_keys]
+    allowed_enders = [k for k, v in enders.items() if len(k) <= base_ending_max_keys]
     outline = ""
     outline += random.choice(simple_starters_keys)
     outline += random.choice(simple_pronouns_keys)
