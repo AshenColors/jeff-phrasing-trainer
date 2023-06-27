@@ -72,16 +72,17 @@ enders = {
 }
 
 # Options
-base_ending_max_keys = 2
-include_past = True
-include_suffix = True
+base_ending_max_keys = 3
+include_have = False
+include_past = False
+include_suffix = False
 
 def generate_simple_phrase():
     allowed_enders = [k for k, v in enders.items() if len(k) < base_ending_max_keys]
     outline = ""
     outline += random.choice(simple_starters_keys)
     outline += random.choice(simple_pronouns_keys)
-    outline += random.choice(simple_structures_keys)
+    if include_have: outline += random.choice(simple_structures_keys)
     base_ender = random.choice(allowed_enders)
     possible_ender_variants = [base_ender]
     if include_past and (enders[base_ender][0] is not None):
