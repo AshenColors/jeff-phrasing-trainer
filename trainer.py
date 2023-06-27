@@ -1,13 +1,16 @@
 import random
 import importlib
-jp  = importlib.import_module("jeff-phrasing.jeff-phrasing")
+jp = importlib.import_module("jeff-phrasing.jeff-phrasing")
 
 simple_starters_keys = list(jp.SIMPLE_STARTERS.keys())
 simple_pronouns_keys = list(jp.SIMPLE_PRONOUNS.keys())
 simple_structures_keys = list(jp.SIMPLE_STRUCTURES.keys())
 
+# STKWH for "why" isn't documented and really hard to stroke
+simple_starters_keys.remove("STKWH")
+
 # Ender format: base_ender: (past_form, suffix_form, past_suffix_form)
-enders = { 
+enders = {
     "RB": ("RBD", None, None),
     "B": ("BD", "BT", "BTD"),
     "RPBG": ("RPBGD", "RPBGT", "RPBGTD"),
@@ -77,12 +80,15 @@ include_have = False
 include_past = False
 include_suffix = False
 
+
 def generate_simple_phrase():
-    allowed_enders = [k for k, v in enders.items() if len(k) <= base_ending_max_keys]
+    allowed_enders = [k for k, v in enders.items() if len(k)
+                      <= base_ending_max_keys]
     outline = ""
     outline += random.choice(simple_starters_keys)
     outline += random.choice(simple_pronouns_keys)
-    if include_have: outline += random.choice(simple_structures_keys)
+    if include_have:
+        outline += random.choice(simple_structures_keys)
     base_ender = random.choice(allowed_enders)
     possible_ender_variants = [base_ender]
     if include_past and (enders[base_ender][0] is not None):
@@ -96,7 +102,14 @@ def generate_simple_phrase():
     # Sanity check; make sure we're actually using the shortest stroke for this translation
     # Can occur if we have past tense on an ender that outputs identical text[]
     reverse_lookup = jp.reverse_lookup(translation)
-    return translation + "\t" + (min(reverse_lookup, key=len)[0]) + "\n"
+    try:
+        return translation + "\t" + (min(reverse_lookup, key=len)[0]) + "\n"
+    except ValueError as e:
+        # This is a bug in jeff-phrasing, I think. Go with our original outline instead.
+        print("generated " + outline +
+              " caused a ValueError, which means this outline isn't passing round-trip with reverse_lookup().")
+        return translation + "\t" + outline + "\n"
+
 
 with open("output.txt", 'w') as f:
     for n in range(20):
