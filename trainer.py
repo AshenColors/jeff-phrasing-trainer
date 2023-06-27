@@ -1,4 +1,5 @@
-import random, importlib
+import random
+import importlib
 jp  = importlib.import_module("jeff-phrasing.jeff-phrasing")
 
 simple_starters_keys = list(jp.SIMPLE_STARTERS.keys())
@@ -90,7 +91,10 @@ def generate_simple_phrase():
     if include_past and include_suffix and (enders[base_ender][2] is not None):
         possible_ender_variants.append(enders[base_ender][2])
     outline += random.choice(possible_ender_variants)
-    return outline
+    translation = jp.lookup([outline]).strip()
+    reverse_lookup = jp.reverse_lookup(translation)
+    return translation + "\t" + (min(reverse_lookup, key=len)[0]) + "\n"
 
-
-print(generate_simple_phrase())
+with open("output.txt", 'w') as f:
+    for n in range(20):
+        f.write(generate_simple_phrase())
