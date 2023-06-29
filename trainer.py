@@ -8,69 +8,6 @@ import importlib
 
 jp = importlib.import_module("jeff-phrasing.jeff-phrasing")
 
-argparser = argparse.ArgumentParser(
-    "Generate Typey Type compatile custom lessons to\
-                                 practice phrases made with the jeff-phrasing\
-                                 dictionary for Plover."
-)
-argparser.add_argument(
-    "-n",
-    "--lines",
-    dest="lines",
-    type=int,
-    choices=range(1, 100 + 1),
-    default=20,
-    metavar="N",
-    help="Number of lesson entries to generate, from 1 to 100",
-)
-argparser.add_argument(
-    "--min",
-    dest="min",
-    type=int,
-    choices=range(1, 6),
-    default=1,
-    help="Minimum number of keys in the base ender for each phrase.",
-)
-argparser.add_argument(
-    "--max",
-    dest="max",
-    type=int,
-    choices=range(1, 7),
-    default=7,
-    help="Maximum number of keys in the base ender for each phrase.",
-)
-argparser.add_argument(
-    "--no-have",
-    dest="include_have",
-    action="store_false",
-    help="Don't allow the F key in simple form. Doesn't affect the ender 'T'.",
-)
-argparser.add_argument(
-    "--no-past",
-    dest="include_past",
-    action="store_false",
-    help="Don't allow past tense in phrases.",
-)
-argparser.add_argument(
-    "--no-suffix-word",
-    dest="include_suffix_word",
-    action="store_false",
-    help="Don't allow suffix words in phrases.",
-)
-
-args = vars(argparser.parse_args())
-
-# could probably just read directly from the dict when needed,
-# maybe refactor this later
-base_ender_min_keys = args["min"]
-base_ender_max_keys = args["max"]
-include_have = args["include_have"]
-include_past = args["include_past"]
-include_suffix_word = args["include_suffix_word"]
-
-if base_ender_min_keys > base_ender_max_keys:
-    raise ValueError("Minimum keys cannot be greater than maximum keys!")
-
 # simple form phrase parts
 SIMPLE_STARTERS_KEYS = list(jp.SIMPLE_STARTERS.keys())
 SIMPLE_PRONOUNS_KEYS = list(jp.SIMPLE_PRONOUNS.keys())
@@ -163,19 +100,23 @@ def generate_simple_phrase():
         dict: Translation as key and stroke as value.
     """
     while True:
-        allowed_enders = [k for k, v in ENDERS.items() if len(k) <= base_ender_max_keys]
+        allowed_enders = [k for k, v in ENDERS.items() if len(k) <= args["max"]]
         outline = ""
         outline += random.choice(SIMPLE_STARTERS_KEYS)
         outline += random.choice(SIMPLE_PRONOUNS_KEYS)
-        if include_have:
+        if args["include_simple_have"]:
             outline += random.choice(SIMPLE_STRUCTURES_KEYS)
         base_ender = random.choice(allowed_enders)
         possible_ender_variants = [base_ender]
-        if include_past and (ENDERS[base_ender][0] is not None):
+        if args["include_past"] and (ENDERS[base_ender][0] is not None):
             possible_ender_variants.append(ENDERS[base_ender][0])
-        if include_suffix_word and (ENDERS[base_ender][1] is not None):
+        if args["include_suffix_word"] and (ENDERS[base_ender][1] is not None):
             possible_ender_variants.append(ENDERS[base_ender][1])
-        if include_past and include_suffix_word and (ENDERS[base_ender][2] is not None):
+        if (
+            args["include_past"]
+            and args["include_suffix_word"]
+            and (ENDERS[base_ender][2] is not None)
+        ):
             possible_ender_variants.append(ENDERS[base_ender][2])
         outline += random.choice(possible_ender_variants)
         try:
@@ -207,18 +148,24 @@ def generate_full_phrase():
         dict: Translation as key and stroke as value.
     """
     while True:
-        allowed_enders = [k for k, v in ENDERS.items() if len(k) <= base_ender_max_keys]
+        allowed_enders = [k for k, v in ENDERS.items() if len(k) <= args["max"]]
         outline = ""
         outline += random.choice(STARTERS_KEYS)
-        outline += random.choice(MIDDLES_KEYS)
-        outline += random.choice(STRUCTURES_KEYS)
+        if args["include_middle"]:
+            outline += random.choice(MIDDLES_KEYS)
+        if args["include_structure"]:
+            outline += random.choice(STRUCTURES_KEYS)
         base_ender = random.choice(allowed_enders)
         possible_ender_variants = [base_ender]
-        if include_past and (ENDERS[base_ender][0] is not None):
+        if args["include_past"] and (ENDERS[base_ender][0] is not None):
             possible_ender_variants.append(ENDERS[base_ender][0])
-        if include_suffix_word and (ENDERS[base_ender][1] is not None):
+        if args["include_suffix_word"] and (ENDERS[base_ender][1] is not None):
             possible_ender_variants.append(ENDERS[base_ender][1])
-        if include_past and include_suffix_word and (ENDERS[base_ender][2] is not None):
+        if (
+            args["include_past"]
+            and args["include_suffix_word"]
+            and (ENDERS[base_ender][2] is not None)
+        ):
             possible_ender_variants.append(ENDERS[base_ender][2])
         outline += random.choice(possible_ender_variants)
         try:
@@ -236,8 +183,8 @@ def generate_full_phrase():
             print(
                 "generated "
                 + outline
-                + " caused a ValueError, which means this outline\
-                isn't passing round-trip with reverse_lookup()."
+                + " caused a ValueError, which means this outline "
+                + "isn't passing round-trip with reverse_lookup()."
             )
             return {translation: outline}
 
@@ -270,4 +217,89 @@ def format_lesson(lesson: dict):
         print(k + "\t" + v)
 
 
-format_lesson(make_lesson(args["lines"], generate_simple_phrase, generate_full_phrase))
+argparser = argparse.ArgumentParser(
+    "Generate Typey Type compatile custom lessons to "
+    + "practice phrases made with the jeff-phrasing "
+    + "dictionary for Plover."
+)
+argparser.add_argument(
+    "-n",
+    "--lines",
+    dest="lines",
+    type=int,
+    choices=range(1, 100 + 1),
+    default=20,
+    metavar="N",
+    help="Number of lesson entries to generate, from 1 to 100, default 20.",
+)
+argparser.add_argument(
+    "--min",
+    dest="min",
+    type=int,
+    choices=range(1, 6),
+    default=1,
+    help="Minimum number of keys in the base ender for each phrase.",
+)
+argparser.add_argument(
+    "--max",
+    dest="max",
+    type=int,
+    choices=range(1, 7),
+    default=7,
+    help="Maximum number of keys in the base ender for each phrase.",
+)
+form_group = argparser.add_mutually_exclusive_group()
+form_group.add_argument(
+    "--simple-only",
+    dest="forms",
+    action="store_const",
+    const=(generate_simple_phrase,),
+    default=(generate_simple_phrase, generate_full_phrase),
+    help="Only generate simple form phrases.",
+)
+form_group.add_argument(
+    "--full-only",
+    dest="forms",
+    action="store_const",
+    const=(generate_full_phrase,),
+    default=(generate_simple_phrase, generate_full_phrase),
+    help="Only generate full form phrases.",
+)
+argparser.add_argument(
+    "--no-simple-have",
+    dest="include_simple_have",
+    action="store_false",
+    help="Don't allow the F key in simple form. Doesn't affect the ender 'T'.",
+)
+argparser.add_argument(
+    "--no-past",
+    dest="include_past",
+    action="store_false",
+    help="Don't allow past tense in phrases.",
+)
+argparser.add_argument(
+    "--no-suffix-word",
+    dest="include_suffix_word",
+    action="store_false",
+    help="Don't allow suffix words in phrases.",
+)
+argparser.add_argument(
+    "--no-full-structure",
+    dest="include_structure",
+    action="store_false",
+    help="Don't allow E, U, or F in full form phrases.",
+)
+argparser.add_argument(
+    "--no-full-middle",
+    dest="include_middle",
+    action="store_false",
+    help="Don't allow A, O, or * in full form phrases.",
+)
+
+args = vars(argparser.parse_args())
+
+if args["min"] > args["max"]:
+    raise ValueError("Minimum keys cannot be greater than maximum keys!")
+
+
+format_lesson(make_lesson(args["lines"], *args["forms"]))
