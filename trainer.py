@@ -147,11 +147,11 @@ enders = {
 
 
 def generate_simple_phrase():
-    """Generates a simple form phrase based on current arguments,
-        formatted for use with Typey Type.
+    """Generates a simple form phrase based on current arguments
+    and the corresponding stroke.
 
     Returns:
-        str: Typey Type compatible custom lesson entry.
+        dict: Translation as key and stroke as value.
     """
     allowed_enders = [k for k, v in enders.items() if len(k) <= base_ender_max_keys]
     outline = ""
@@ -173,7 +173,7 @@ def generate_simple_phrase():
     # Can occur if we have past tense on an ender that outputs identical text[]
     reverse_lookup = jp.reverse_lookup(translation)
     try:
-        return translation + "\t" + (min(reverse_lookup, key=len)[0])
+        return {translation: min(reverse_lookup, key=len)[0]}
     except ValueError:
         # The bug this checks for has been resolved, but I'm leaving this in as a sanity check.
         print(
@@ -182,8 +182,16 @@ def generate_simple_phrase():
             + " caused a ValueError, which means this outline\
               isn't passing round-trip with reverse_lookup()."
         )
-        return translation + "\t" + outline
+        return {translation: outline}
 
 
+lesson = {}
 for n in range(lines):
-    print(generate_simple_phrase())
+    while True:
+        candidate = generate_simple_phrase()
+        if list(candidate.keys())[0] not in lesson:
+            lesson.update(candidate)
+            break
+
+for k, v in lesson.items():
+    print(k + "\t" + v)

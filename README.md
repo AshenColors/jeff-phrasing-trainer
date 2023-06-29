@@ -3,5 +3,5 @@ trainer.py outputs a file with translations and stroke hints in the correct form
 TODO:
 - set options via argparse (DONE)
 - output to stdout (DONE)
-- avoid duplicate entries in any given output
+- avoid duplicate entries in any given output (DONE)
 - add full form support
