@@ -3,6 +3,7 @@ Generates custom lessons based on jeff-phrasing to use with Typey Type.
 """
 import random
 import argparse
+import typing
 import importlib
 
 jp = importlib.import_module("jeff-phrasing.jeff-phrasing")
@@ -42,7 +43,7 @@ argparser.add_argument(
     "--no-have",
     dest="include_have",
     action="store_false",
-    help="Don't allow the F key in strokes. Doesn't affect the ender 'T'.",
+    help="Don't allow the F key in simple form. Doesn't affect the ender 'T'.",
 )
 argparser.add_argument(
     "--no-past",
@@ -61,7 +62,6 @@ args = vars(argparser.parse_args())
 
 # could probably just read directly from the dict when needed,
 # maybe refactor this later
-lines = args["lines"]
 base_ender_min_keys = args["min"]
 base_ender_max_keys = args["max"]
 include_have = args["include_have"]
@@ -71,17 +71,26 @@ include_suffix_word = args["include_suffix_word"]
 if base_ender_min_keys > base_ender_max_keys:
     raise ValueError("Minimum keys cannot be greater than maximum keys!")
 
-simple_starters_keys = list(jp.SIMPLE_STARTERS.keys())
-simple_pronouns_keys = list(jp.SIMPLE_PRONOUNS.keys())
-simple_structures_keys = list(jp.SIMPLE_STRUCTURES.keys())
+# simple form phrase parts
+SIMPLE_STARTERS_KEYS = list(jp.SIMPLE_STARTERS.keys())
+SIMPLE_PRONOUNS_KEYS = list(jp.SIMPLE_PRONOUNS.keys())
+SIMPLE_STRUCTURES_KEYS = list(jp.SIMPLE_STRUCTURES.keys())
 
 # STKWH for "why" isn't documented and really hard to stroke
-simple_starters_keys.remove("STKWH")
+# so we're not including it in the list of valids
+# yes, that's supposed to be a const, it really is after this
+SIMPLE_STARTERS_KEYS.remove("STKWH")
+
+# full form phrase parts
+STARTERS_KEYS = list(jp.STARTERS.keys())
+MIDDLES_KEYS = list(jp.MIDDLES.keys())
+STRUCTURES_KEYS = list(jp.STRUCTURES.keys())
 
 # Ender format: base_ender: (past_form, suffix_form, past_suffix_form)
 # Ideally we'd parse this directly from jeff-phrasing but there are
 # irregularities that make this a much easier approach for now.
-enders = {
+# this is shared by both simple and full form
+ENDERS = {
     "RB": ("RBD", None, None),
     "B": ("BD", "BT", "BTD"),
     "RPBG": ("RPBGD", "RPBGT", "RPBGTD"),
@@ -153,45 +162,112 @@ def generate_simple_phrase():
     Returns:
         dict: Translation as key and stroke as value.
     """
-    allowed_enders = [k for k, v in enders.items() if len(k) <= base_ender_max_keys]
-    outline = ""
-    outline += random.choice(simple_starters_keys)
-    outline += random.choice(simple_pronouns_keys)
-    if include_have:
-        outline += random.choice(simple_structures_keys)
-    base_ender = random.choice(allowed_enders)
-    possible_ender_variants = [base_ender]
-    if include_past and (enders[base_ender][0] is not None):
-        possible_ender_variants.append(enders[base_ender][0])
-    if include_suffix_word and (enders[base_ender][1] is not None):
-        possible_ender_variants.append(enders[base_ender][1])
-    if include_past and include_suffix_word and (enders[base_ender][2] is not None):
-        possible_ender_variants.append(enders[base_ender][2])
-    outline += random.choice(possible_ender_variants)
-    translation = jp.lookup([outline]).strip()
-    # Sanity check; make sure we're actually using the shortest stroke for this translation
-    # Can occur if we have past tense on an ender that outputs identical text[]
-    reverse_lookup = jp.reverse_lookup(translation)
-    try:
-        return {translation: min(reverse_lookup, key=len)[0]}
-    except ValueError:
-        # The bug this checks for has been resolved, but I'm leaving this in as a sanity check.
-        print(
-            "generated "
-            + outline
-            + " caused a ValueError, which means this outline\
-              isn't passing round-trip with reverse_lookup()."
-        )
-        return {translation: outline}
-
-
-lesson = {}
-for n in range(lines):
     while True:
-        candidate = generate_simple_phrase()
-        if list(candidate.keys())[0] not in lesson:
-            lesson.update(candidate)
-            break
+        allowed_enders = [k for k, v in ENDERS.items() if len(k) <= base_ender_max_keys]
+        outline = ""
+        outline += random.choice(SIMPLE_STARTERS_KEYS)
+        outline += random.choice(SIMPLE_PRONOUNS_KEYS)
+        if include_have:
+            outline += random.choice(SIMPLE_STRUCTURES_KEYS)
+        base_ender = random.choice(allowed_enders)
+        possible_ender_variants = [base_ender]
+        if include_past and (ENDERS[base_ender][0] is not None):
+            possible_ender_variants.append(ENDERS[base_ender][0])
+        if include_suffix_word and (ENDERS[base_ender][1] is not None):
+            possible_ender_variants.append(ENDERS[base_ender][1])
+        if include_past and include_suffix_word and (ENDERS[base_ender][2] is not None):
+            possible_ender_variants.append(ENDERS[base_ender][2])
+        outline += random.choice(possible_ender_variants)
+        try:
+            translation = jp.lookup([outline]).strip()
+        except KeyError:
+            # We tried an invalid outline, try again
+            continue
+        # Sanity check; make sure we're actually using the shortest stroke for this translation
+        # Can occur if we have past tense on an ender that outputs identical text[]
+        reverse_lookup = jp.reverse_lookup(translation)
+        try:
+            return {translation: min(reverse_lookup, key=len)[0]}
+        except ValueError:
+            # The bug this checks for has been resolved, but I'm leaving this in as a sanity check.
+            print(
+                "generated "
+                + outline
+                + " caused a ValueError, which means this outline\
+                isn't passing round-trip with reverse_lookup()."
+            )
+            return {translation: outline}
 
-for k, v in lesson.items():
-    print(k + "\t" + v)
+
+def generate_full_phrase():
+    """Generates a full form phrase based on current arguments
+    and the corresponding stroke.
+
+    Returns:
+        dict: Translation as key and stroke as value.
+    """
+    while True:
+        allowed_enders = [k for k, v in ENDERS.items() if len(k) <= base_ender_max_keys]
+        outline = ""
+        outline += random.choice(STARTERS_KEYS)
+        outline += random.choice(MIDDLES_KEYS)
+        outline += random.choice(STRUCTURES_KEYS)
+        base_ender = random.choice(allowed_enders)
+        possible_ender_variants = [base_ender]
+        if include_past and (ENDERS[base_ender][0] is not None):
+            possible_ender_variants.append(ENDERS[base_ender][0])
+        if include_suffix_word and (ENDERS[base_ender][1] is not None):
+            possible_ender_variants.append(ENDERS[base_ender][1])
+        if include_past and include_suffix_word and (ENDERS[base_ender][2] is not None):
+            possible_ender_variants.append(ENDERS[base_ender][2])
+        outline += random.choice(possible_ender_variants)
+        try:
+            translation = jp.lookup([outline]).strip()
+        except KeyError:
+            # We tried an invalid outline, try again
+            continue
+        # Sanity check; make sure we're actually using the shortest stroke for this translation
+        # Can occur if we have past tense on an ender that outputs identical text[]
+        reverse_lookup = jp.reverse_lookup(translation)
+        try:
+            return {translation: min(reverse_lookup, key=len)[0]}
+        except ValueError:
+            # The bug this checks for has been resolved, but I'm leaving this in as a sanity check.
+            print(
+                "generated "
+                + outline
+                + " caused a ValueError, which means this outline\
+                isn't passing round-trip with reverse_lookup()."
+            )
+            return {translation: outline}
+
+
+def make_lesson(lines: int, *phrase_gen: typing.Callable):
+    """Make a dict
+
+    Args:
+        *phrase_gen (typing.Callable): The phrase generation function to call.
+        If more than one, randomly choose between them for each entry.
+    """
+    lesson = {}
+    for _ in range(lines):
+        while True:
+            candidate = random.choice(phrase_gen)()
+            if list(candidate.keys())[0] not in lesson:
+                lesson.update(candidate)
+                break
+    return lesson
+
+
+def format_lesson(lesson: dict):
+    """Prints a lesson in Typey Type custom lesson format.
+
+    Args:
+        lesson (dict): The generated lesson to print out.
+    """
+
+    for k, v in lesson.items():  # pylint: disable=invalid-name
+        print(k + "\t" + v)
+
+
+format_lesson(make_lesson(args["lines"], generate_simple_phrase, generate_full_phrase))
