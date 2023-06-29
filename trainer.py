@@ -1,6 +1,75 @@
+"""
+Generates custom lessons based on jeff-phrasing to use with Typey Type.
+"""
 import random
+import argparse
 import importlib
+
 jp = importlib.import_module("jeff-phrasing.jeff-phrasing")
+
+argparser = argparse.ArgumentParser(
+    "Generate Typey Type compatile custom lessons to\
+                                 practice phrases made with the jeff-phrasing\
+                                 dictionary for Plover."
+)
+argparser.add_argument(
+    "-n",
+    "--lines",
+    dest="lines",
+    type=int,
+    choices=range(1, 100 + 1),
+    default=20,
+    metavar="N",
+    help="Number of lesson entries to generate, from 1 to 100",
+)
+argparser.add_argument(
+    "--min",
+    dest="min",
+    type=int,
+    choices=range(1, 6),
+    default=1,
+    help="Minimum number of keys in the base ender for each phrase.",
+)
+argparser.add_argument(
+    "--max",
+    dest="max",
+    type=int,
+    choices=range(1, 7),
+    default=7,
+    help="Maximum number of keys in the base ender for each phrase.",
+)
+argparser.add_argument(
+    "--no-have",
+    dest="include_have",
+    action="store_false",
+    help="Don't allow the F key in strokes. Doesn't affect the ender 'T'.",
+)
+argparser.add_argument(
+    "--no-past",
+    dest="include_past",
+    action="store_false",
+    help="Don't allow past tense in phrases.",
+)
+argparser.add_argument(
+    "--no-suffix-word",
+    dest="include_suffix_word",
+    action="store_false",
+    help="Don't allow suffix words in phrases.",
+)
+
+args = vars(argparser.parse_args())
+
+# could probably just read directly from the dict when needed,
+# maybe refactor this later
+lines = args["lines"]
+base_ender_min_keys = args["min"]
+base_ender_max_keys = args["max"]
+include_have = args["include_have"]
+include_past = args["include_past"]
+include_suffix_word = args["include_suffix_word"]
+
+if base_ender_min_keys > base_ender_max_keys:
+    raise ValueError("Minimum keys cannot be greater than maximum keys!")
 
 simple_starters_keys = list(jp.SIMPLE_STARTERS.keys())
 simple_pronouns_keys = list(jp.SIMPLE_PRONOUNS.keys())
@@ -10,6 +79,8 @@ simple_structures_keys = list(jp.SIMPLE_STRUCTURES.keys())
 simple_starters_keys.remove("STKWH")
 
 # Ender format: base_ender: (past_form, suffix_form, past_suffix_form)
+# Ideally we'd parse this directly from jeff-phrasing but there are
+# irregularities that make this a much easier approach for now.
 enders = {
     "RB": ("RBD", None, None),
     "B": ("BD", "BT", "BTD"),
@@ -71,19 +142,18 @@ enders = {
     "P": ("PD", "PT", "PTD"),
     "RBGZ": ("RBGSZ", None, None),
     "RBS": ("RBSZ", "RBTS", "RBTSDZ"),
-    "RBG": ("RGBD", "RBGT", "RBGTD")
+    "RBG": ("RGBD", "RBGT", "RBGTD"),
 }
-
-# Options
-base_ending_max_keys = 3
-include_have = False
-include_past = False
-include_suffix = False
 
 
 def generate_simple_phrase():
-    allowed_enders = [k for k, v in enders.items() if len(k)
-                      <= base_ending_max_keys]
+    """Generates a simple form phrase based on current arguments,
+        formatted for use with Typey Type.
+
+    Returns:
+        str: Typey Type compatible custom lesson entry.
+    """
+    allowed_enders = [k for k, v in enders.items() if len(k) <= base_ender_max_keys]
     outline = ""
     outline += random.choice(simple_starters_keys)
     outline += random.choice(simple_pronouns_keys)
@@ -93,9 +163,9 @@ def generate_simple_phrase():
     possible_ender_variants = [base_ender]
     if include_past and (enders[base_ender][0] is not None):
         possible_ender_variants.append(enders[base_ender][0])
-    if include_suffix and (enders[base_ender][1] is not None):
+    if include_suffix_word and (enders[base_ender][1] is not None):
         possible_ender_variants.append(enders[base_ender][1])
-    if include_past and include_suffix and (enders[base_ender][2] is not None):
+    if include_past and include_suffix_word and (enders[base_ender][2] is not None):
         possible_ender_variants.append(enders[base_ender][2])
     outline += random.choice(possible_ender_variants)
     translation = jp.lookup([outline]).strip()
@@ -103,14 +173,17 @@ def generate_simple_phrase():
     # Can occur if we have past tense on an ender that outputs identical text[]
     reverse_lookup = jp.reverse_lookup(translation)
     try:
-        return translation + "\t" + (min(reverse_lookup, key=len)[0]) + "\n"
-    except ValueError as e:
-        # This is a bug in jeff-phrasing, I think. Go with our original outline instead.
-        print("generated " + outline +
-              " caused a ValueError, which means this outline isn't passing round-trip with reverse_lookup().")
-        return translation + "\t" + outline + "\n"
+        return translation + "\t" + (min(reverse_lookup, key=len)[0])
+    except ValueError:
+        # The bug this checks for has been resolved, but I'm leaving this in as a sanity check.
+        print(
+            "generated "
+            + outline
+            + " caused a ValueError, which means this outline\
+              isn't passing round-trip with reverse_lookup()."
+        )
+        return translation + "\t" + outline
 
 
-with open("output.txt", 'w') as f:
-    for n in range(20):
-        f.write(generate_simple_phrase())
+for n in range(lines):
+    print(generate_simple_phrase())

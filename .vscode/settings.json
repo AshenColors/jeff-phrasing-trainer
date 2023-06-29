@@ -1,0 +1,9 @@
+{
+    "scss.format.enable": false,
+    "python.languageServer": "Pylance",
+    "python.formatting.provider": "black",
+    "editor.defaultFormatter": null,
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    }
+}
