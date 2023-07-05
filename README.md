@@ -19,10 +19,5 @@ options:
   ```
 
 TODO:
-- set options via argparse (DONE)
-- output to stdout (DONE)
-- avoid duplicate entries in any given output (DONE)
-- add full form support (DONE)
-- add arguments to choose which forms to include (DONE)
-- add arguments to change full form settings as well (DONE)
+- dynamically parse available enders from jp.ENDERS like other lists instead of using a manually crafted LUT
 - add more robust test suite
